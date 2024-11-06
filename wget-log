@@ -1,0 +1,6 @@
+--2024-11-06 16:10:38--  https://drive.google.com/uc?id=your-file-id
+Resolving drive.google.com (drive.google.com)... 142.250.187.206, 2a00:1450:4009:820::200e
+Connecting to drive.google.com (drive.google.com)|142.250.187.206|:443... connected.
+HTTP request sent, awaiting response... 404 Not Found
+2024-11-06 16:10:38 ERROR 404: Not Found.
+
