@@ -1,15 +1,19 @@
-# self_optimizer.py
-
-from learning_module import LearningModule
-from feedback_processor import FeedbackProcessor
+from learning_module import (
+    fetch_dynamic_response,
+    save_response,
+    adapt_response_patterns,
+    train_from_feedback,
+    save_model,
+    load_model,
+)
+import feedback_processor as feedback  # Use feedback_module directly for feedback processing functions
 
 class SelfOptimizer:
-    def __init__(self, feedback_processor: FeedbackProcessor, learning_module: LearningModule):
-        self.feedback_processor = feedback_processor
-        self.learning_module = learning_module
+    def __init__(self):
         self.threshold = 5  # Initial threshold for common issues
         self.importance_threshold = 10  # Initial frequency threshold for task importance
         self.min_data_size = 20  # Minimum data size required for training
+        feedback.load_feedback()  # Load feedback on initialization
 
     def analyze_feedback_trends(self):
         """
@@ -17,15 +21,12 @@ class SelfOptimizer:
         Returns:
             dict: Key insights and suggested improvements.
         """
-        feedback_data = self.feedback_processor.get_all_feedback()
+        feedback_data = feedback.analyze_feedback_trends()
         
-        # Normalize feedback data if necessary
-        feedback_data = self.normalize_feedback(feedback_data)
-        
-        # Analyze trends (e.g., common issues, sentiment trends)
+        # Process insights (e.g., common issues, sentiment trends)
         feedback_insights = {
-            'common_issues': self.identify_common_issues(feedback_data),
-            'sentiment_trends': self.evaluate_sentiment(feedback_data)
+            'common_issues': feedback_data.get('common_issues', {}),
+            'sentiment_trends': feedback_data.get('sentiment_trends', {})
         }
         return feedback_insights
 
@@ -38,8 +39,7 @@ class SelfOptimizer:
         # Analyze feedback data for prioritized adjustments
         for issue, count in feedback_data.get('common_issues', {}).items():
             if count > self.threshold:  # Threshold for significant issues
-                # Adjust response patterns based on feedback insights
-                self.adjust_response(issue)
+                adapt_response_patterns()
 
     def refine_task_execution(self, task_name: str):
         """
@@ -63,8 +63,8 @@ class SelfOptimizer:
             print("Insufficient interaction data for training.")
             return
         
-        # Pass valid data to LearningModule for training
-        self.learning_module.train(interaction_data)
+        # Pass valid data to the learning module for training
+        train_from_feedback()
 
     def self_evaluate(self) -> dict:
         """
@@ -88,7 +88,7 @@ class SelfOptimizer:
         Adjusts feedback and task thresholds based on recent trends.
         """
         # Example of analyzing feedback volume and satisfaction trends
-        feedback_volume = len(self.feedback_processor.get_all_feedback())
+        feedback_volume = len(feedback.analyze_feedback_trends())
         user_satisfaction = self.calculate_satisfaction()
         
         # Decrease thresholds if user satisfaction is below target or feedback volume is high
@@ -108,7 +108,6 @@ class SelfOptimizer:
 
     def identify_common_issues(self, feedback_data):
         """Identifies common issues from feedback data."""
-        # Example logic to identify frequent issues
         common_issues = {}
         for feedback in feedback_data:
             issue = feedback.get('issue')
@@ -118,7 +117,6 @@ class SelfOptimizer:
 
     def evaluate_sentiment(self, feedback_data):
         """Analyzes sentiment trends within feedback data."""
-        # Placeholder for sentiment analysis logic
         sentiment_trends = {'positive': 0, 'neutral': 0, 'negative': 0}
         for feedback in feedback_data:
             sentiment = feedback.get('sentiment')
@@ -128,30 +126,24 @@ class SelfOptimizer:
 
     def adjust_response(self, issue):
         """Adjusts response patterns based on the identified issue."""
-        # Logic to modify response patterns to address specific issues
         print(f"Adjusting response for issue: {issue}")
 
     def get_task_data(self, task_name):
         """Retrieves task-specific data needed for performance adjustments."""
-        # Placeholder for retrieving task data
         return {'frequency': 15}  # Example data
 
     def adjust_execution_parameters(self, task_name, task_data):
         """Adjusts execution parameters based on task data."""
-        # Logic to optimize task execution based on past performance
         print(f"Optimizing task execution for: {task_name}")
 
     def calculate_accuracy(self):
         """Calculates response accuracy."""
-        # Placeholder for accuracy calculation logic
         return 0.95
 
     def calculate_satisfaction(self):
         """Calculates user satisfaction metric."""
-        # Placeholder for satisfaction calculation logic
         return 0.85
 
     def calculate_efficiency(self):
         """Calculates task efficiency metric."""
-        # Placeholder for efficiency calculation logic
         return 0.9
