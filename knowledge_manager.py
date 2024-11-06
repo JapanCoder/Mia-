@@ -1,7 +1,7 @@
 # knowledge_manager.py
 
 import json
-from context_manager import get_context, update_context
+from context_manager import ContextManager
 from utility_functions import load_from_json, save_to_json
 from fuzzywuzzy import process  # Assuming you have the fuzzywuzzy library installed
 from functools import lru_cache  # For caching
