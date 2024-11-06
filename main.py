@@ -2,7 +2,7 @@
 
 from mia import Mia
 from voice_interface import VoiceInterface
-from session_manager import SessionManager
+import session_manager
 import datetime
 import traceback
 
