@@ -1,9 +1,12 @@
 from datetime import datetime
 from utility_functions import save_to_json, load_from_json, format_datetime
-from context_manager import get_context, update_context
+import context_manager
 from learning_module import fetch_dynamic_response, save_response, adapt_response_patterns
-from feedback_module import process_feedback
-from emotional_analysis import detect_emotion  # Importing from the emotion module
+from feedback_processor import process_feedback
+from emotional_analysis import EmotionalAnalysis  # Importing EmotionalAnalysis instead of detect_emotion
+
+# Initialize EmotionalAnalysis
+emotional_analysis = EmotionalAnalysis()
 
 # Path for saving session data
 SESSION_DATA_PATH = "session_data.json"
@@ -132,9 +135,12 @@ def get_dynamic_response(user_input):
     - str: Generated response.
     """
     context = get_context()
-    emotion = detect_emotion(user_input)  # Using detect_emotion from the emotion module
-    response = fetch_dynamic_response(emotion, intensity=1, context=context.get('activity', 'general'))
-    log_interaction(user_input, response, emotion)
+    # Analyze emotion using EmotionalAnalysis
+    emotion_state = emotional_analysis.analyze_emotion(user_input)
+    response = emotional_analysis.get_response(context=context)  # Fetch response based on emotional state
+    
+    # Log the interaction with the detected emotion and response
+    log_interaction(user_input, response, emotion_state.emotion.value)
     return response
 
 
