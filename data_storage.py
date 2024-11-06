@@ -90,6 +90,21 @@ class DataStorage:
             self.error_logger.log(f"Failed to create backup: {e}")
             return "Backup failed"
 
+    def load_user_profile(self, user_id: str = "user_profile") -> dict:
+        """
+        Loads the user's profile from data storage.
+        """
+        try:
+            # Attempt to retrieve the user profile from storage by key
+            user_profile = self.get_entry(user_id)
+            if user_profile is None:
+                print(f"No profile found for user {user_id}.")
+                return {}
+            return user_profile
+        except Exception as e:
+            self.error_logger.log(f"Failed to load user profile: {e}")
+            return {}
+
 # Example usage
 if __name__ == "__main__":
     storage = DataStorage()
