@@ -1,15 +1,12 @@
-# main.py
-
 from mia import Mia
 from voice_interface import VoiceInterface
-import session_manager
+import session_manager  # Import as a module, not as a class
 import datetime
 import traceback
 
 class MainApp:
     def __init__(self):
         self.mia = Mia()
-        self.session_manager = SessionManager()
         self.voice_interface = VoiceInterface()
         self.use_voice = False  # Start in text mode by default
         self.voice_activated = False  # Track if voice activation is triggered
@@ -68,18 +65,18 @@ class MainApp:
         Processes the user's input through Mia, with error handling.
         """
         try:
-            if not self.session_manager.is_active_session():
-                self.session_manager.start_session()
+            if not session_manager.is_active_session():  # Use session_manager module
+                session_manager.start_session()
 
             response = self.mia.process_input(user_input)
-            self.session_manager.log_interaction(user_input, response)
+            session_manager.log_interaction(user_input, response)  # Use session_manager module
             self.collect_feedback()
 
             return response
         except Exception as e:
             print("An error occurred. Please try again.")
             print(traceback.format_exc())
-            return "I'm sorry, something went wrong. Can you please try again?"
+            return "I'm sorry, something went wrong. Can you please try again."
 
     def respond(self, response: str):
         """
@@ -120,7 +117,7 @@ class MainApp:
         Handles the shutdown sequence, including session cleanup.
         """
         self.respond("Goodbye! Shutting down Mia.")
-        self.session_manager.end_session()
+        session_manager.end_session()  # Use session_manager module
 
 if __name__ == "__main__":
     app = MainApp()
