@@ -1,7 +1,5 @@
-# mia.py
-
 import asyncio
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple
 from datetime import datetime
 from command_parser import CommandParser
 from context_manager import ContextManager
@@ -14,8 +12,7 @@ from error_logger import ErrorLogger
 from self_optimizer import SelfOptimizer
 from data_storage import DataStorage
 from security_manager import SecurityManager
-from session_manager import SessionManager
-
+import session_manager  # Use as a module
 
 class Mia:
     def __init__(self):
@@ -31,7 +28,6 @@ class Mia:
         self.self_optimizer = SelfOptimizer()
         self.data_storage = DataStorage()
         self.security_manager = SecurityManager()
-        self.session_manager = SessionManager()
 
         # Initialize state and settings
         self.active_session = None
@@ -43,7 +39,7 @@ class Mia:
         Initializes a session for a user.
         """
         try:
-            self.active_session = self.session_manager.start_session(user_id)
+            self.active_session = session_manager.start_session(user_id)  # Use session_manager module directly
             self.context_manager.load_context(user_id)
             print(f"Session started for user {user_id}.")
         except Exception as e:
@@ -58,7 +54,7 @@ class Mia:
             if self.active_session:
                 user_id = self.active_session["user_id"]
                 self.context_manager.save_context(user_id)
-                self.session_manager.end_session(user_id)
+                session_manager.end_session(user_id)  # Use session_manager module directly
                 self.active_session = None
                 print("Session ended and data saved.")
             else:
