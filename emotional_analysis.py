@@ -1,51 +1,28 @@
-from enum import Enum
 from random import choice
-
-# Placeholder imports for feedback_module, context_manager, and learning
-import feedback_processor  # Placeholder for feedback processing
-import context_manager  # Placeholder for context management
-import learning_module  # Placeholder for dynamic response learning (e.g., web scraping)
-
-
-class EmotionType(Enum):
-    """Defines basic emotional states."""
-    HAPPY = "happy"
-    SAD = "sad"
-    ANGRY = "angry"
-    CALM = "calm"
-    STRESSED = "stressed"
-    MOTIVATED = "motivated"
-    BORED = "bored"
-    NEUTRAL = "neutral"
-
+import re
+import feedback_processor
+import context_manager
+import learning_module
+from shared_types import EmotionType
 
 class EmotionalState:
     """Represents the emotional state of the user."""
     
     def __init__(self, emotion=EmotionType.NEUTRAL, intensity=0.5):
-        """
-        Initialize with a default emotion and intensity.
-        
-        Parameters:
-        - emotion: EmotionType, default NEUTRAL
-        - intensity: float, from 0.0 (low) to 1.0 (high)
-        """
         self.emotion = emotion
-        self.intensity = intensity  # Scale from 0.0 to 1.0
-        
+        self.intensity = intensity
+    
     def update_emotion(self, new_emotion, new_intensity):
-        """Updates the emotional state with a new emotion and intensity."""
         self.emotion = new_emotion
         self.intensity = max(0.0, min(new_intensity, 1.0))  # Keep intensity within bounds
-    
+
     def __str__(self):
         return f"Emotion: {self.emotion.value}, Intensity: {self.intensity}"
 
 
-class EmotionalResponse:
-    """Generates nuanced responses based on EmotionalState, feedback, and context awareness, with learning integration."""
-    
-    # Fallback RESPONSE_MAP if no dynamic response is available
+class EmotionalAnalysis:
+    """Analyzes and manages emotional states, context awareness, and feedback-based learning."""
+
     RESPONSE_MAP = {
         EmotionType.HAPPY: {
             'low': ["I'm glad to see you’re in a good mood!"],
@@ -66,11 +43,52 @@ class EmotionalResponse:
             'low': ["How can I assist you today?"],
             'medium': ["I'm ready whenever you are!"],
             'high': ["I'm here, ready and attentive!"]
+        },
+        # Added responses for FEARFUL
+        EmotionType.FEARFUL: {
+            'low': ["It's okay to feel a bit scared. I'm here with you."],
+            'medium': ["I can sense you're worried. Let's go through this together."],
+            'high': ["I know things may seem frightening, but I'll be here for support."]
+        },
+        # Added responses for SURPRISED
+        EmotionType.SURPRISED: {
+            'low': ["Oh! It seems something unexpected happened."],
+            'medium': ["Wow, that sounds surprising!"],
+            'high': ["That's astonishing! Tell me more."]
         }
     }
-    
+
+    # Emotion keywords for detecting emotions in user input
+    emotion_keywords = {
+        EmotionType.HAPPY: ["happy", "joy", "glad", "excited", "pleased"],
+        EmotionType.SAD: ["sad", "unhappy", "sorrow", "depressed", "down"],
+        EmotionType.ANGRY: ["angry", "mad", "frustrated", "upset", "furious"],
+        EmotionType.FEARFUL: ["afraid", "scared", "fearful", "worried", "anxious"],
+        EmotionType.SURPRISED: ["surprised", "shocked", "amazed", "astonished", "startled"],
+    }
+
+    def __init__(self):
+        self.current_state = EmotionalState()
+
+    def detect_emotion(self, user_input):
+        """
+        Detects emotion from user input based on predefined keywords.
+        
+        Args:
+        - user_input (str): The user's input message.
+        
+        Returns:
+        - EmotionType: Detected emotion or NEUTRAL if no emotion is detected.
+        """
+        user_input = user_input.lower()
+
+        for emotion, keywords in self.emotion_keywords.items():
+            if any(re.search(rf"\b{keyword}\b", user_input) for keyword in keywords):
+                return emotion
+
+        return EmotionType.NEUTRAL  # Default to NEUTRAL if no keywords are matched
+
     def get_intensity_level(self, intensity):
-        """Categorizes intensity into 'low', 'medium', or 'high'."""
         if intensity < 0.3:
             return 'low'
         elif intensity < 0.7:
@@ -78,51 +96,32 @@ class EmotionalResponse:
         else:
             return 'high'
     
-    def get_response(self, emotional_state, context=None):
-        """
-        Generate a nuanced response based on the EmotionalState, context, and dynamic learning.
-        
-        Parameters:
-        - emotional_state: EmotionalState
-        - context: Optional; information from context_manager
-        
-        Returns:
-        - str: A response suitable to the detected emotion, intensity, and context.
-        """
-        intensity_level = self.get_intensity_level(emotional_state.intensity)
-        
-        # Fetch a dynamic response based on emotion, intensity, and context from learning.py
-        dynamic_response = learning.fetch_dynamic_response(
-            emotion=emotional_state.emotion, 
+    def analyze_emotion(self, text):
+        detected_emotion = self.detect_emotion(text)
+        intensity = 0.7 if "very" in text or "extremely" in text else 0.5  # Adjust intensity based on input
+        self.current_state.update_emotion(detected_emotion, intensity)
+        return self.current_state
+
+    def get_response(self, context=None):
+        intensity_level = self.get_intensity_level(self.current_state.intensity)
+        dynamic_response = learning_module.fetch_dynamic_response(
+            emotion=self.current_state.emotion,
             intensity=intensity_level,
-            context=context
+            context=context.get('activity', 'general') if context else 'general'
         )
-        
-        # Use dynamic response if available, otherwise fall back to predefined map
+
         if dynamic_response:
             response = dynamic_response
         else:
-            base_responses = self.RESPONSE_MAP.get(emotional_state.emotion, {}).get(intensity_level, ["I'm here for you."])
+            base_responses = self.RESPONSE_MAP.get(self.current_state.emotion, {}).get(intensity_level, ["I'm here for you."])
             response = choice(base_responses)
         
-        # Modify response based on context if available
         if context:
             response = self.context_aware_response(response, context)
         
         return response
 
     def context_aware_response(self, response, context):
-        """
-        Modify the response based on context.
-        
-        Parameters:
-        - response: str, initial response
-        - context: dict, context data from context_manager
-        
-        Returns:
-        - str: Contextually aware response.
-        """
-        # Placeholder for getting context. Replace with actual method calls from context_manager
         context_data = context.get('activity', None)
         if context_data == 'work_stress':
             response += " I noticed you've had a busy schedule lately. Remember to take breaks!"
@@ -131,45 +130,38 @@ class EmotionalResponse:
         
         return response
 
-    def receive_feedback(self, emotional_state, response, feedback):
-        """
-        Adjust future responses based on user feedback.
-        
-        Parameters:
-        - emotional_state: EmotionalState, current user emotion
-        - response: str, AI response given
-        - feedback: dict, feedback data from feedback_module
-        """
-        # Process feedback through feedback_module
-        feedback_module.process_feedback(emotional_state.emotion, response, feedback)
-        
-        # Save user-approved responses dynamically in learning module
-        if feedback.get('user_reaction') == 'positive':
-            learning.save_response(emotional_state.emotion, response, feedback)
+    def update_emotion(self, emotion, intensity):
+        self.current_state.update_emotion(emotion, intensity)
 
+    def receive_feedback(self, response, feedback):
+        feedback_processor.process_feedback(self.current_state.emotion, response, feedback)
+        
+        if feedback.get('user_reaction') == 'positive':
+            learning_module.save_response(self.current_state.emotion, response, feedback)
 
 # Usage example
 
-# Creating an initial emotional state
-user_emotion = EmotionalState(emotion=EmotionType.STRESSED, intensity=0.7)
-print(user_emotion)
+# Create EmotionalAnalysis instance
+emotional_analysis = EmotionalAnalysis()
 
-# Getting a context-aware and intensity-nuanced response with dynamic learning
-response_generator = EmotionalResponse()
-
-# Placeholder context example (from context_manager)
+# Placeholder context example
 context_example = {
     'activity': 'work_stress'
 }
 
-response = response_generator.get_response(user_emotion, context=context_example)
+# Analyze and update emotion based on text
+user_input = "I feel really happy with how things are going!"
+emotional_analysis.analyze_emotion(user_input)
+
+# Generate response
+response = emotional_analysis.get_response(context=context_example)
 print("Assistant Response:", response)
 
 # Placeholder feedback example
 feedback_example = {
-    'user_reaction': 'positive',  # User liked the response
+    'user_reaction': 'positive',
     'suggestion': None
 }
 
-# Processing feedback and saving response dynamically in learning
-response_generator.receive_feedback(user_emotion, response, feedback_example)
+# Process feedback
+emotional_analysis.receive_feedback(response, feedback_example)
