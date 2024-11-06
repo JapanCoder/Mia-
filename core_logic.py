@@ -9,8 +9,8 @@ from self_optimizer import SelfOptimizer
 from security_manager import SecurityManager
 from api_connector import APIConnector
 from voice_interface import VoiceInterface
-from feedback_processor import FeedbackProcessor
-from learning_module import LearningModule
+import feedback_processor as FeedbackProcessor
+import learning_module as LearningModule
 from error_logger import ErrorLogger
 from data_storage import DataStorage
 
@@ -22,7 +22,8 @@ class CoreLogic:
         self.emotional_analysis = EmotionalAnalysis()
         self.task_scheduler = TaskScheduler()
         self.knowledge_manager = KnowledgeManager()
-        self.self_optimizer = SelfOptimizer(FeedbackProcessor(), LearningModule())
+        # Pass modules without parentheses to SelfOptimizer
+        self.self_optimizer = SelfOptimizer()
         self.security_manager = SecurityManager()
         self.api_connector = APIConnector()
         self.voice_interface = VoiceInterface()
