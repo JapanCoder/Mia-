@@ -1,9 +1,9 @@
 from datetime import datetime
 from utility_functions import save_to_json, load_from_json, format_datetime
-import context_manager
+from context_manager import get_context, update_context
 from learning_module import fetch_dynamic_response, save_response, adapt_response_patterns
 from feedback_processor import process_feedback
-from emotional_analysis import EmotionalAnalysis  # Importing EmotionalAnalysis instead of detect_emotion
+from emotional_analysis import EmotionalAnalysis
 
 # Initialize EmotionalAnalysis
 emotional_analysis = EmotionalAnalysis()
@@ -23,51 +23,55 @@ _current_session = {
 
 def start_session():
     """
-    Initializes a new session, setting the start time and resetting interactions and feedback.
+    Starts a new session, setting the start time and initializing interaction and feedback storage.
     """
     global _current_session
-    _current_session["start_time"] = datetime.now()
-    _current_session["interactions"] = []
-    _current_session["feedback"] = []
-    print(f"Session started at {format_datetime(_current_session['start_time'])}")
+    _current_session.update({
+        "start_time": datetime.now().isoformat(),
+        "interactions": [],
+        "feedback": []
+    })
+    print(f"Session started at {_current_session['start_time']}")
 
 
 def end_session():
     """
-    Ends the current session by setting the end time and saving session data to disk.
+    Ends the current session by setting the end time and saving session data to persistent storage.
     """
     global _current_session
-    _current_session["end_time"] = datetime.now()
+    _current_session["end_time"] = datetime.now().isoformat()
     save_session_data(_current_session)
-    print(f"Session ended at {format_datetime(_current_session['end_time'])}")
+    print(f"Session ended at {_current_session['end_time']}")
 
 
-def save_session_data(session_data, file_path=SESSION_DATA_PATH):
+def save_session_data(session_data, file_path=None):
     """
-    Saves session data to a JSON file for later retrieval.
-
-    Args:
-    - session_data (dict): The session data to save.
-    - file_path (str): Path to the JSON file.
+    Saves the given session data to a JSON file. If the file already contains session data, appends to it.
     """
-    all_sessions = load_from_json(file_path)
-    if isinstance(all_sessions, list):
-        all_sessions.append(session_data)
-    else:
-        all_sessions = [session_data]
-    save_to_json(all_sessions, file_path)
+    file_path = file_path or SESSION_DATA_PATH
+    try:
+        all_sessions = load_from_json(file_path) or []
+    except (IOError, ValueError) as e:
+        print(f"Error loading sessions: {e}")
+        all_sessions = []
+    
+    # Ensure all_sessions is a list, even if the file contains unexpected data
+    if not isinstance(all_sessions, list):
+        all_sessions = [all_sessions]
+    
+    all_sessions.append(session_data)
+    
+    try:
+        save_to_json(all_sessions, file_path)
+    except IOError as e:
+        print(f"Error saving session data: {e}")
 
 
 # --- Interaction Tracking Functions ---
 
 def log_interaction(user_input, response, emotion=None):
     """
-    Logs each interaction within the current session.
-
-    Args:
-    - user_input (str): The user's input message.
-    - response (str): The response provided.
-    - emotion (str): Detected emotion (if available).
+    Logs a single interaction, capturing the user input, system response, and emotion if provided.
     """
     interaction = {
         "timestamp": datetime.now().isoformat(),
@@ -82,13 +86,7 @@ def log_interaction(user_input, response, emotion=None):
 
 def get_recent_interactions(n=5):
     """
-    Retrieves the last N interactions within the session for contextual continuity.
-
-    Args:
-    - n (int): The number of recent interactions to retrieve.
-
-    Returns:
-    - list of dict: Recent interactions.
+    Retrieves the most recent interactions, up to the number specified.
     """
     return _current_session["interactions"][-n:]
 
@@ -97,27 +95,21 @@ def get_recent_interactions(n=5):
 
 def add_feedback(feedback_entry):
     """
-    Adds user feedback to the current session and updates feedback in learning and feedback modules.
-
-    Args:
-    - feedback_entry (dict): Feedback data (e.g., rating, comment).
+    Adds feedback to the current session, processes it, and adapts response patterns.
     """
     _current_session["feedback"].append(feedback_entry)
-    process_feedback(feedback_entry)  # Update feedback module
-    adapt_response_patterns()  # Adjust response patterns based on feedback
+    process_feedback(feedback_entry)
+    adapt_response_patterns()
 
 
 def get_cumulative_feedback():
     """
-    Calculates cumulative feedback for the session for long-term interaction analysis.
-
-    Returns:
-    - dict: Summary of feedback (e.g., average rating).
+    Computes the average rating and feedback count from the current session's feedback.
     """
     if not _current_session["feedback"]:
         return {"average_rating": 0.0, "count": 0}
     
-    ratings = [f.get('rating', 0) for f in _current_session["feedback"]]
+    ratings = [f.get('rating') for f in _current_session["feedback"] if 'rating' in f]
     avg_rating = sum(ratings) / len(ratings) if ratings else 0.0
     return {"average_rating": avg_rating, "count": len(ratings)}
 
@@ -126,31 +118,29 @@ def get_cumulative_feedback():
 
 def get_dynamic_response(user_input):
     """
-    Fetches a response dynamically based on current context and session data.
-
-    Args:
-    - user_input (str): User's input to shape the response.
-
-    Returns:
-    - str: Generated response.
+    Retrieves a dynamic response based on the user input, analyzing emotion and integrating context.
     """
     context = get_context()
-    # Analyze emotion using EmotionalAnalysis
     emotion_state = emotional_analysis.analyze_emotion(user_input)
-    response = emotional_analysis.get_response(context=context)  # Fetch response based on emotional state
+    response = fetch_dynamic_response(user_input, context)
     
-    # Log the interaction with the detected emotion and response
-    log_interaction(user_input, response, emotion_state.emotion.value)
+    # Log interaction with the derived emotion and context
+    log_interaction(user_input, response, emotion=emotion_state.emotion if emotion_state else None)
     return response
 
 
 def continue_from_previous_session():
     """
-    Loads context from the most recent session to maintain continuity.
+    Attempts to continue from the last session by loading the context of the previous session.
     """
-    all_sessions = load_from_json(SESSION_DATA_PATH)
+    try:
+        all_sessions = load_from_json(SESSION_DATA_PATH) or []
+    except (IOError, ValueError) as e:
+        print(f"Error loading previous sessions: {e}")
+        return
+    
     if all_sessions:
         last_session = all_sessions[-1]
-        if last_session.get("context"):
-            update_context(last_session["context"])  # Restore previous context if available
+        if "context" in last_session:
+            update_context(last_session["context"])
             print(f"Continuing from previous session with context: {last_session['context']}")
