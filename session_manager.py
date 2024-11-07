@@ -1,12 +1,13 @@
 from datetime import datetime
 from utility_functions import save_to_json, load_from_json, format_datetime
-from context_manager import get_context, update_context
+from context_manager import ContextManager
 from learning_module import fetch_dynamic_response, save_response, adapt_response_patterns
 from feedback_processor import process_feedback
 from emotional_analysis import EmotionalAnalysis
 
-# Initialize EmotionalAnalysis
+# Initialize necessary components
 emotional_analysis = EmotionalAnalysis()
+context_manager = ContextManager()  # Create an instance of ContextManager
 
 # Path for saving session data
 SESSION_DATA_PATH = "session_data.json"
@@ -21,12 +22,6 @@ _current_session = {
 
 # --- Session Management Functions ---
 
-def is_active_session():
-    """
-    Checks if there is an active session.
-    """
-    return _current_session["start_time"] is not None and _current_session["end_time"] is None
-
 def start_session():
     """
     Starts a new session, setting the start time and initializing interaction and feedback storage.
@@ -39,6 +34,7 @@ def start_session():
     })
     print(f"Session started at {_current_session['start_time']}")
 
+
 def end_session():
     """
     Ends the current session by setting the end time and saving session data to persistent storage.
@@ -47,6 +43,7 @@ def end_session():
     _current_session["end_time"] = datetime.now().isoformat()
     save_session_data(_current_session)
     print(f"Session ended at {_current_session['end_time']}")
+
 
 def save_session_data(session_data, file_path=None):
     """
@@ -59,7 +56,6 @@ def save_session_data(session_data, file_path=None):
         print(f"Error loading sessions: {e}")
         all_sessions = []
     
-    # Ensure all_sessions is a list, even if the file contains unexpected data
     if not isinstance(all_sessions, list):
         all_sessions = [all_sessions]
     
@@ -69,6 +65,7 @@ def save_session_data(session_data, file_path=None):
         save_to_json(all_sessions, file_path)
     except IOError as e:
         print(f"Error saving session data: {e}")
+
 
 # --- Interaction Tracking Functions ---
 
@@ -81,16 +78,18 @@ def log_interaction(user_input, response, emotion=None):
         "user_input": user_input,
         "response": response,
         "emotion": emotion,
-        "context": get_context()
+        "context": context_manager.get_context()  # Use context_manager instance here
     }
     _current_session["interactions"].append(interaction)
     print(f"Logged interaction: {interaction}")
+
 
 def get_recent_interactions(n=5):
     """
     Retrieves the most recent interactions, up to the number specified.
     """
     return _current_session["interactions"][-n:]
+
 
 # --- Feedback Management Functions ---
 
@@ -101,6 +100,7 @@ def add_feedback(feedback_entry):
     _current_session["feedback"].append(feedback_entry)
     process_feedback(feedback_entry)
     adapt_response_patterns()
+
 
 def get_cumulative_feedback():
     """
@@ -113,19 +113,21 @@ def get_cumulative_feedback():
     avg_rating = sum(ratings) / len(ratings) if ratings else 0.0
     return {"average_rating": avg_rating, "count": len(ratings)}
 
+
 # --- Learning and Context Integration ---
 
 def get_dynamic_response(user_input):
     """
     Retrieves a dynamic response based on the user input, analyzing emotion and integrating context.
     """
-    context = get_context()
+    context = context_manager.get_context()  # Use context_manager instance here
     emotion_state = emotional_analysis.analyze_emotion(user_input)
     response = fetch_dynamic_response(user_input, context)
     
     # Log interaction with the derived emotion and context
     log_interaction(user_input, response, emotion=emotion_state.emotion if emotion_state else None)
     return response
+
 
 def continue_from_previous_session():
     """
@@ -140,5 +142,10 @@ def continue_from_previous_session():
     if all_sessions:
         last_session = all_sessions[-1]
         if "context" in last_session:
-            update_context(last_session["context"])
+            context_manager.update_context(last_session["context"])  # Update using context_manager instance
             print(f"Continuing from previous session with context: {last_session['context']}")
+
+
+def is_active_session():
+    """Check if a session is currently active based on the start and end times."""
+    return _current_session["start_time"] is not None and _current_session["end_time"] is None
