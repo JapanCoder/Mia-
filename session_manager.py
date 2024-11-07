@@ -1,12 +1,13 @@
 from datetime import datetime
 from utility_functions import save_to_json, load_from_json, format_datetime
-from context_manager import get_context, update_context
+from context_manager import ContextManager
 from learning_module import fetch_dynamic_response, save_response, adapt_response_patterns
 from feedback_processor import process_feedback
 from emotional_analysis import EmotionalAnalysis
 
-# Initialize EmotionalAnalysis
+# Initialize EmotionalAnalysis and ContextManager
 emotional_analysis = EmotionalAnalysis()
+context_manager = ContextManager()  # Instantiate ContextManager
 
 # Path for saving session data
 SESSION_DATA_PATH = "session_data.json"
@@ -78,7 +79,7 @@ def log_interaction(user_input, response, emotion=None):
         "user_input": user_input,
         "response": response,
         "emotion": emotion,
-        "context": get_context()
+        "context": context_manager.get_context()  # Use ContextManager instance to get context
     }
     _current_session["interactions"].append(interaction)
     print(f"Logged interaction: {interaction}")
@@ -120,7 +121,7 @@ def get_dynamic_response(user_input):
     """
     Retrieves a dynamic response based on the user input, analyzing emotion and integrating context.
     """
-    context = get_context()
+    context = context_manager.get_context()  # Use ContextManager instance to get context
     emotion_state = emotional_analysis.analyze_emotion(user_input)
     response = fetch_dynamic_response(user_input, context)
     
@@ -142,5 +143,5 @@ def continue_from_previous_session():
     if all_sessions:
         last_session = all_sessions[-1]
         if "context" in last_session:
-            update_context(last_session["context"])
+            context_manager.update_context("context", last_session["context"])  # Update using ContextManager instance
             print(f"Continuing from previous session with context: {last_session['context']}")
