@@ -13,6 +13,7 @@ from self_optimizer import SelfOptimizer
 from data_storage import DataStorage
 from security_manager import SecurityManager
 import session_manager  # Use as a module
+import feedback_processor
 
 class Mia:
     def __init__(self):
